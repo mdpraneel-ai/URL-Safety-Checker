@@ -1,0 +1,148 @@
+from urllib.parse import urlparse
+import re
+import ipywidgets as widgets
+from IPython.display import display, HTML, clear_output
+
+# -------------------------------
+# Business Logic
+# -------------------------------
+def check_url(url):
+    score = 100
+    reasons = []
+
+    parsed = urlparse(url)
+
+    # Check for HTTPS
+    if parsed.scheme != "https":
+        score -= 20
+        reasons.append("❌ URL does not use HTTPS")
+
+    # Check for IP address
+    ip_pattern = r'(\d{1,3}\.){3}\d{1,3}'
+    if re.search(ip_pattern, parsed.netloc):
+        score -= 30
+        reasons.append("❌ Uses IP address instead of domain")
+
+    # Check URL length
+    if len(url) > 75:
+        score -= 15
+        reasons.append("⚠️ URL is too long")
+
+    # Check for suspicious words
+    suspicious_words = [
+        "login", "verify", "secure",
+        "update", "bank", "account",
+        "free", "bonus"
+    ]
+
+    for word in suspicious_words:
+        if word in url.lower():
+            score -= 10
+            reasons.append(f"⚠️ Suspicious keyword: {word}")
+
+    # Determine status based on score
+    if score >= 80:
+        status = "SAFE ✅"
+        color = "#28a745"
+    elif score >= 50:
+        status = "SUSPICIOUS ⚠️"
+        color = "#ff9800"
+    else:
+        status = "UNSAFE ❌"
+        color = "#dc3545"
+
+    return status, score, reasons, color
+
+
+# -------------------------------
+# Attractive Header
+# -------------------------------
+display(HTML("""
+<div style="
+background: linear-gradient(135deg, #667eea, #764ba2);
+padding: 25px;
+border-radius: 20px;
+text-align: center;
+color: white;
+box-shadow: 0px 5px 15px rgba(0,0,0,0.3);
+margin-bottom: 15px;">
+
+<h1>🔒 URL Safety Checker</h1>
+<p>Advanced Python Programming Mini Project</p>
+
+</div>
+"""))
+
+# -------------------------------
+# Widgets
+# -------------------------------
+url_input = widgets.Text(
+    placeholder="Enter URL Here...",
+    layout=widgets.Layout(width='80%')
+)
+
+check_button = widgets.Button(
+    description="Check URL",
+    button_style='success',
+    icon='search'
+)
+
+output = widgets.Output()
+
+# -------------------------------
+# Button Event Handler
+# -------------------------------
+def on_button_click(b):
+    with output:
+        clear_output()
+
+        url = url_input.value.strip()
+
+        if not url:
+            display(HTML("""
+            <h3 style='color: red;'>
+            Please Enter a URL
+            </h3>
+            """))
+            return
+
+        status, score, reasons, color = check_url(url)
+
+        reasons_html = ""
+
+        for reason in reasons:
+            reasons_html += f"<li>{reason}</li>"
+
+        if reasons_html == "":
+            reasons_html = "<li>✅ No Issues Detected</li>"
+
+        display(HTML(f"""
+        <div style="
+        background: linear-gradient(135deg, #ffffff, #f0f4ff);
+        padding: 20px;
+        border-radius: 15px;
+        margin-top: 15px;
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.2);">
+
+        <h2 style='color: {color};'>
+        {status}
+        </h2>
+
+        <h3>Safety Score: {score}/100</h3>
+
+        <p><b>URL:</b> {url}</p>
+
+        <h4>Analysis:</h4>
+
+        <ul>
+        {reasons_html}
+        </ul>
+
+        </div>
+        """))
+
+check_button.on_click(on_button_click)
+
+display(url_input)
+display(check_button)
+display(output)
